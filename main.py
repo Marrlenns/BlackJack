@@ -6,6 +6,9 @@ class Player:
         self.bet = None
         self.point = 0
         self.cards = []
+        self.win = 1
+        self.is_double = 0
+
     def hit(self):
         pass
 
@@ -35,7 +38,7 @@ calculator = {
             'Q': 10,
             'K': 10,
             'A': [1, 11],
-        }
+}
 
 def calc_point(a, b):
     point  = 0
@@ -50,21 +53,32 @@ def calc_point(a, b):
         if a == 'A':
             point += 1
         else:
-            point += calculator[b]
+            point += calculator[a]
     else:
         point  = calculator[a] + calculator[b]
     return point
 
 class Diller:
 
-    def __init__(self, deck):
+    def __init__(self, deck, players):
         self.deck = deck
+        self.players = players
 
     def dd(self):
-        diller = Player('Диллер')
+        self.players.append(Player('Дилер'))
+        diller = self.players[len(self.players) - 1]
         diller.cards.append(self.deck[0])
         diller.cards.append(self.deck[1])
         diller.point = calc_point(self.deck[0], self.deck[1])
+        print(f"Карты Дилера: {self.deck[0]}-?")
+        if diller.point == 21:
+            print(f"Карты Дилера: {self.deck[0]}-{self.deck[1]}")
+            self.deck.pop(0)
+            self.deck.pop(0)
+            return 1
+        self.deck.pop(0)
+        self.deck.pop(0)
+
 
 
 
@@ -84,8 +98,6 @@ class Deck:
     def get_shuffled_deck(self):
         random.shuffle(self.sh_deck)
         return self.sh_deck
-
-# print(Deck(2).get_shuffled_deck())
 
 class BlackJack(Diller):
     pass
@@ -113,28 +125,39 @@ class Game:
                 if deck[1] == 'A':
                     player.point += 1
                 else:
-                    player.point += player.calculator[deck[1]]
+                    player.point += calculator[deck[1]]
             elif deck[1] == 'A':
                 player.point += 11
                 if deck[0] == 'A':
                     player.point += 1
                 else:
-                    player.point += player.calculator[deck[1]]
+                    player.point += calculator[deck[0]]
             else:
-                player.point += player.calculator[deck[0]] + player.calculator[deck[1]]
+                player.point += calculator[deck[0]] + calculator[deck[1]]
 
             deck.pop(0)
             deck.pop(0)
 
-        Diller(deck)
+        buffer = Diller(deck, players).dd()
+
+        if buffer:
+            for player in players:
+                if player.point != 21:
+                    print(f"{player.name} проиграл партию, так как у Дилера 'BlackJack'\nДилер получает ставку: {player.bet}$")
+                else:
+                    print(f"{player.name} получил свою ставку {players.bet}$")
+            return
 
         for player in players:
+            print()
             cmd = ''
             flag, cnt = 0, 0
+            if player.name == 'Дилер':
+                break
             while cmd != '2':
                 cmd = input(f"{player.name} - количество ваших очков: {player.point}\nСделайте ход:\n\t1 - Hit\n\t2 - Stand\n\t3 - Split\n\t4 - Double\n\t5 - Surrender\n")
                 if cmd == '1':
-                    a = player.calculator[deck[0]]
+                    a = calculator[deck[0]]
                     if deck[0] == 'A':
                         player.point += 1
                         if player.point + 10 <= 21:
@@ -143,7 +166,8 @@ class Game:
                         player.point += a
                     print(f"Ваша новая карта: {deck[0]}, общая сумма: {player.point}")
                     if player.point > 21:
-                        print(f"{player.name} проиграл партию!!!\nДиллер получил вашу ставку: {player.bet}$")
+                        print(f"{player.name} покидает игру")
+                        player.win = 0
                         break
                     player.cards.append(deck[0])
                     deck.pop(0)
@@ -158,10 +182,12 @@ class Game:
                         player.cards[0] = [player.cards[0], deck[0]]
                         player.cards[1] = [player.cards[1], deck[1]]
                         player.bet = [player.bet, player.bet]
-                        player.point = [player.point // 2 + player.calculator[deck[0]], player.point // 2 + player.calculator[deck[1]]]
+                        player.point = [player.point // 2 + calculator[deck[0]], player.point // 2 + calculator[deck[1]]]
 
                         deck.pop(0)
                         deck.pop(0)
+                    else:
+                        print("Вы не можете пользоваться командой Split")
 
                 elif cmd == '4' and not cnt:
                     if len(player.cards) == 2:
@@ -172,11 +198,27 @@ class Game:
                         print("double эс ал")
 
                 elif cmd == '5':
-                    print(f"Диллер получил половину вашей ставки - {round(player.bet / 2, 1)}$.\n{player.name} покидает игру!")
+                    print(f"Дилер получил половину вашей ставки - {round(player.bet / 2, 1)}$.\n{player.name} покидает игру!")
+                    player.win = 0
                     break
+        d = len(players) - 1
+        print(players[d].point, '\n')
+        for i in range(len(players)):
+            if players[i].name == 'Дилер':
+                break
+            print()
+            if players[i].point < players[d].point or not players[i].win:
+                print(f"{players[i].name} проиграл партию!\nДилер получает вашу ставку: {players[i].bet}$")
+            elif players[i].point == players[d].point:
+                print(f"{players[i].name} получил свою ставку - {players[i].bet}$")
+            else:
+                if len(players[i].cards) == 2 and calc_point(players[i].cards[0], players[i].cards[1]) == 21:
+                    print(f"{players[i].name} выиграл ставку 3/2  -  {players[i].bet * 1.5}$")
+                else:
+                    print(f"{players[i].name} выиграл свою ставку - {players[i].bet}$")
 
 
-
+# print(calculator['A'] + calculator['10'])
 Game().play()
 
 
